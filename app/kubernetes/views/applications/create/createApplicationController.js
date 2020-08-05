@@ -1,5 +1,5 @@
 import angular from 'angular';
-import _ from 'lodash-es';
+import * as _ from 'lodash-es';
 import filesizeParser from 'filesize-parser';
 import * as JsonPatch from 'fast-json-patch';
 
@@ -75,7 +75,13 @@ class KubernetesCreateApplicationController {
   }
 
   isValid() {
-    return !this.state.alreadyExists && !this.state.hasDuplicateEnvironmentVariables && !this.state.hasDuplicatePersistedFolderPaths && !this.state.hasDuplicateConfigurationPaths;
+    return (
+      !this.state.alreadyExists &&
+      !this.state.hasDuplicateEnvironmentVariables &&
+      !this.state.hasDuplicatePersistedFolderPaths &&
+      !this.state.hasDuplicateConfigurationPaths &&
+      !this.state.hasDuplicateIngressRoutes
+    );
   }
 
   onChangeName() {
@@ -226,9 +232,24 @@ class KubernetesCreateApplicationController {
     this.formValues.PublishedPorts.push(new KubernetesApplicationPublishedPortFormValue());
   }
 
+  onChangePortMappingIngressRoute() {
+    const appRoutes = _.map(this.formValues.PublishedPorts, 'IngressRoute');
+    const allRoutes = _.flatMapDeep(this.formValues.OriginalIngressClasses, (c) => _.map(c.Rules, 'Path'));
+    const duplicates = KubernetesFormValidationHelper.getDuplicates(appRoutes);
+    _.forEach(appRoutes, (route, idx) => {
+      if (_.includes(allRoutes, route)) {
+        duplicates[idx] = route;
+      }
+    });
+    this.state.duplicateIngressRoutes = duplicates;
+    this.state.hasDuplicateIngressRoutes = Object.keys(this.state.duplicateIngressRoutes).length > 0;
+  }
+
   removePublishedPort(index) {
     this.formValues.PublishedPorts.splice(index, 1);
+    this.onChangePortMappingIngressRoute();
   }
+
   /**
    * !PUBLISHED PORTS UI MANAGEMENT
    */
@@ -615,6 +636,8 @@ class KubernetesCreateApplicationController {
         hasDuplicatePersistedFolderPaths: false,
         duplicateConfigurationPaths: {},
         hasDuplicateConfigurationPaths: false,
+        duplicateIngressRoutes: {},
+        hasDuplicateIngressRoutes: false,
         isEdit: false,
         params: {
           namespace: this.$transition$.params().namespace,
