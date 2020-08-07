@@ -1,7 +1,7 @@
 import angular from 'angular';
 import _ from 'lodash-es';
 import filesizeParser from 'filesize-parser';
-import { KubernetesResourceQuotaDefaults, KubernetesResourceQuota } from 'Kubernetes/models/resource-quota/models';
+import { KubernetesResourceQuota, KubernetesResourceQuotaDefaults } from 'Kubernetes/models/resource-quota/models';
 import KubernetesResourceReservationHelper from 'Kubernetes/helpers/resourceReservationHelper';
 import KubernetesEventHelper from 'Kubernetes/helpers/eventHelper';
 
@@ -132,8 +132,9 @@ class KubernetesResourcePoolController {
           }
         }
       );
+    } else {
+      return this.$async(this.updateResourcePoolAsync);
     }
-    return this.$async(this.updateResourcePoolAsync);
   }
 
   hasEventWarnings() {
